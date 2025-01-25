@@ -83,7 +83,7 @@ jobs:
           #!/bin/sh
 
           echo -n $SSHPRIVATE_KEY | base64 -d | install -c -m 400 /dev/stdin key
-          ssh -i key test@test id
+          ssh -o StrictHostKeyChecking=accept-new -i key test@test id
           if [[ $? -ne 0 ]]; then echo "login failed"; exit 1; fi
           
           ssh -i key test@test id invalid
