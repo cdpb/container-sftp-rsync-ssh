@@ -8,6 +8,7 @@ on:
     paths:
       - 'Dockerfile'
       - 'entrypoint.sh'
+      - 'config/*'
 
 env:
   TEST_TAG: ${{ github.repository }}:test
@@ -65,29 +66,41 @@ jobs:
       - name: Run and test Docker container
         run: |
           # env
-          cron_working='* * * * * echo working-great'
-          cron_nonworking='* * * * echo nonworking'
+          ssh_valid_key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICGFHXRG6OxkFaKA2w6Om45oHNYwB1XN7bCHT7tdP0J/ root@e799b2f78a3b'
+          ssh_invalid_key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII+tNOZ8zcl4MvmdXu/Qx9ArHwX257fMhnjJDFu2xPNOPEINOPE root@d1d832b41cca'
           
-          # run
-          docker run --name test -e CRON_WORKING="${cron_working}" -e CRON_NOTWORKING="${cron_nonworking}" -d ${{ env.TEST_TAG }}
+          # this was created once and is for testing purpose only
+          ssh_private_key='LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNBaGhSMTBSdWpzWkJXaWdOc09qcHVPYUJ6V01BZFZ6ZTJ3aDArN1hUOUNmd0FBQUpoMHhYUWdkTVYwCklBQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQWhoUjEwUnVqc1pCV2lnTnNPanB1T2FCeldNQWRWemUyd2gwKzdYVDlDZncKQUFBRUFhams5aS9DNGtXMHhJeFJGc2pIbFFQY0VLTmFDVlY3dEZRdndSWXFPVmN5R0ZIWFJHNk94a0ZhS0EydzZPbTQ1bwpITll3QjFYTjdiQ0hUN3RkUDBKL0FBQUFFWEp2YjNSQVpUYzVPV0l5WmpjNFlUTmlBUUlEQkE9PQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K'
+
+          # setup env for docker
+          docker network create testing
+
+          # run server
+          docker run --rm --name test --network testing -e SSHUSER_test="${ssh_valid_key}" -e SSHUSER_invalid="${ssh_invalid_key}" -d ${{ env.TEST_TAG }}
+
+          # run client
+          cat >>EOF > client_test.sh
+          #!/bin/sh
+
+          echo -n $SSHPRIVATE_KEY | base64 -d | install -c -m 400 /dev/stdin key
+          ssh -i key test@test id
+          if [[ $? -ne 0 ]]; then echo "login failed"; exit 1; fi
           
-          # check if non working crontab didnt make it to the final
-          if [[ $(echo "${cron_working}" | base64) == $(docker exec test crontab -l | base64) ]]; then
-            echo ok
-          else
+          ssh -i key test@test id invalid
+          if [[ $? -ne 1 ]]; then echo "invalid user exists - failed"; exit 1; fi
+
+          EOF
+          chmod +x client_test.sh
+
+          docker run --rm --name client --network testing --entrypoint "" -e SSHPRIVATE_KEY="${ssh_private_key}" -v $(pwd)/client_test.sh:/client_test.sh ${{ env.TEST_TAG }} /client_test.sh
+
+          if [[ $? -eq 0 ]]; then
+            echo "all testes passed"
+          fi
+            echo "client test failed"
             exit 1
           fi
-
-          # check if execution and logging works
-          for ((i=0; i<35;i++)); do 
-            if docker logs test 2>&1 | grep 'CMD (echo working-great)'; then 
-              exit 0
-            else 
-              echo -n .
-              sleep 2
-            fi
-          done
-          exit 1
+          
 
       - name: Build and push and release
         uses: docker/build-push-action@v6

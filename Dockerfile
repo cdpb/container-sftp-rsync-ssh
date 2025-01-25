@@ -1,7 +1,7 @@
 FROM alpine:latest
 
 # packages
-RUN apk add --update-cache rsync openssh-server shadow
+RUN apk add --update-cache rsync openssh-server curl openssh-client shadow
 
 # permissions
 RUN groupadd -r sshonlygrp
