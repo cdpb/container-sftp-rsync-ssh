@@ -1,6 +1,7 @@
 name: Docker
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '35 23 * * *'
   push:
@@ -9,7 +10,6 @@ on:
       - 'Dockerfile'
       - 'entrypoint.sh'
       - 'config/*'
-      - '.github/*'
 
 env:
   TEST_TAG: ${{ github.repository }}:test
