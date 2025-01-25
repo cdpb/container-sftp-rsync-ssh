@@ -65,6 +65,8 @@ jobs:
     
       - name: Run and test Docker container
         run: |
+          apt-get install -y jq 
+
           # env
           ssh_valid_key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICGFHXRG6OxkFaKA2w6Om45oHNYwB1XN7bCHT7tdP0J/ root@e799b2f78a3b'
           ssh_invalid_key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII+tNOZ8zcl4MvmdXu/Qx9ArHwX257fMhnjJDFu2xPNOPEINOPE root@d1d832b41cca'
@@ -77,16 +79,18 @@ jobs:
 
           # run server
           docker run --rm --name test --network testing -e SSHUSER_test="${ssh_valid_key}" -e SSHUSER_invalid="${ssh_invalid_key}" -d ${{ env.TEST_TAG }}
+          ip=$(docker inspect test | jq -r '.[].NetworkSettings.Networks.testing.IPAddress')
+
 
           # run client
           cat >>EOF > client_test.sh
           #!/bin/sh
 
           echo -n $SSHPRIVATE_KEY | base64 -d | install -c -m 400 /dev/stdin key
-          ssh -o StrictHostKeyChecking=accept-new -i key test@test id
+          ssh -o StrictHostKeyChecking=accept-new -i key test@${ip} id
           if [[ $? -ne 0 ]]; then echo "login failed"; exit 1; fi
           
-          ssh -i key test@test id invalid
+          ssh -i key invalidt@${ip} id invalid
           if [[ $? -ne 1 ]]; then echo "invalid user exists - failed"; exit 1; fi
 
           EOF
