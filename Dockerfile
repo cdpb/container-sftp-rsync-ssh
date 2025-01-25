@@ -1,16 +1,13 @@
-FROM debian:stable-slim
+FROM alpine:latest
 
 # packages
-RUN apt-get update && \
-    apt-get install -y rsync openssh-server
+RUN apk add --update-cache rsync openssh-server shadow
 
 # permissions
-RUN groupadd -r sftponlygrp && \
-    groupadd -r sshonlygrp
+RUN groupadd -r sshonlygrp
 
 # sshd
 COPY config/ssh_custom.conf /etc/ssh/sshd_config.d/
-RUN mkdir -p /run/sshd
 
 # entrypoint
 COPY entrypoint.sh /entrypoint.sh
@@ -19,4 +16,3 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-De"]
-
