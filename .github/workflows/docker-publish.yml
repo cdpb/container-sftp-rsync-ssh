@@ -66,8 +66,6 @@ jobs:
     
       - name: Run and test Docker container
         run: |
-          apt-get install -y jq 
-
           # env
           ssh_valid_key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICGFHXRG6OxkFaKA2w6Om45oHNYwB1XN7bCHT7tdP0J/ root@e799b2f78a3b'
           ssh_invalid_key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII+tNOZ8zcl4MvmdXu/Qx9ArHwX257fMhnjJDFu2xPNOPEINOPE root@d1d832b41cca'
