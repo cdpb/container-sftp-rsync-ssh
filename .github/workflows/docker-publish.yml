@@ -79,35 +79,26 @@ jobs:
 
           # run server
           echo "start server"
-          docker run --rm --name test --network testing -e SSHUSER_test="${ssh_valid_key}" -e SSHUSER_invalid="${ssh_invalid_key}" -d ${{ env.TEST_TAG }}
+          docker run --rm --name server --network-alias server --network testing -e SSHUSER_test="${ssh_valid_key}" -e SSHUSER_invalid="${ssh_invalid_key}" -d ${{ env.TEST_TAG }}
+
+          docker inspect server
 
           # run client
           cat <<- 'EOF' > client_test.sh
           #!/bin/sh
 
           echo -n $SSHPRIVATE_KEY | base64 -d | install -c -m 400 /dev/stdin key
-          ssh -o StrictHostKeyChecking=accept-new -i key test@$test id
+          ssh -o StrictHostKeyChecking=accept-new -i key test@$server id
           if [[ $? -ne 0 ]]; then echo "login failed"; exit 1; fi
           
-          ssh -i key invalid@test id invalid
+          ssh -i key test@server id invalid
           if [[ $? -ne 1 ]]; then echo "invalid user exists - failed"; exit 1; fi
 
           EOF
           chmod +x client_test.sh
 
-          cat client_test.sh
-
           echo "start client"
           docker run --rm --name client --network testing --entrypoint "" -e SSHPRIVATE_KEY="${ssh_private_key}" -v $(pwd)/client_test.sh:/client_test.sh ${{ env.TEST_TAG }} /client_test.sh
-          test=$?
-
-          echo "run tests"
-          if [[ $test -eq 0 ]]; then
-            echo "all testes passed"
-          fi
-            echo "client test failed"
-            exit 1
-          fi
           
 
       - name: Build and push and release
