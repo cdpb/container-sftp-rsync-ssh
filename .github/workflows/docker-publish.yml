@@ -79,12 +79,13 @@ jobs:
 
           # run server
           echo "start server"
-          docker run --rm --name server --network testing --network-alias server -e SSHUSER_test="${ssh_valid_key}" -e SSHUSER_invalid="${ssh_invalid_key}" -d ${{ env.TEST_TAG }}
+          docker run --rm --name server --network testing -e SSHUSER_test="${ssh_valid_key}" -e SSHUSER_invalid="${ssh_invalid_key}" -d ${{ env.TEST_TAG }}
 
           # run client
           cat <<- 'EOF' > client_test.sh
           #!/bin/sh
 
+          sleep 3
           echo -n $SSHPRIVATE_KEY | base64 -d | install -c -m 400 /dev/stdin key
           ssh -o StrictHostKeyChecking=accept-new -i key test@server id
           if [[ $? -ne 0 ]]; then echo "login failed"; exit 1; fi
